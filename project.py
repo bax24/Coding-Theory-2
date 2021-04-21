@@ -14,6 +14,7 @@ def buildTree(Pd):
 
     return Pd[0]  # sort it into place
 
+# Hello adri
 
 def assignCodes(node, codes, pat=''):
     assignCodes.codes = codes
