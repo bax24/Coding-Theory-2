@@ -1,6 +1,5 @@
 import numpy as np
 from suppl.utils import *
-import collections
 
 
 def buildTree(Pd):
@@ -13,6 +12,7 @@ def buildTree(Pd):
         Pd.sort(key=lambda t: t[1])
 
     return Pd[0]  # sort it into place
+
 
 # Hello adri
 
@@ -91,7 +91,7 @@ def LZ77(input_string, size_l):
 def get_expected_length(huff_codes, prob):
     codes_lengths = 0
     for key in huff_codes:
-        codes_lengths += prob[key]*len(huff_codes[key])
+        codes_lengths += prob[key] * len(huff_codes[key])
 
     return codes_lengths
 
@@ -110,10 +110,28 @@ def get_marg_prob(f):
     return prob
 
 
+def get_length_genome():
+    file = load_binary_text_sample()
+    if len(file) > 0:
+        print('Binary text successfully loaded (starts with {})'.format(f[:10]))
+
+    return len(file)
+
+
+def encoder(message, code):
+    encoding = ''
+    while message:
+        element = message[0:3]
+        encoding += code[element]
+        message = message[3:]
+    return encoding
+
+
 if __name__ == "__main__":
 
-    Huffman, Lempel_zev, LZ77_algo = False, False, True
+    Huffman, Lempel_zev, LZ77_algo = False, False, False
     Q5, Q6, Q7 = False, False, False
+    Q10 = True
 
     if Huffman:
         # Exercise 7 verification
@@ -145,7 +163,7 @@ if __name__ == "__main__":
 
         marg_prob = get_marg_prob(f)
         print(marg_prob)
-        print(sum(marg_prob.values(), 0.0)) # verification
+        print(sum(marg_prob.values(), 0.0))  # verification
 
         marg_prob_list = list(marg_prob.items())
         Tree = buildTree(marg_prob_list)
@@ -153,8 +171,27 @@ if __name__ == "__main__":
         codes = {}
         assignCodes(trim_tree, {**codes})
         print('Huffman code for genome : ' + str(assignCodes.codes))
+        encoded = encoder(f, assignCodes.codes)
+        # length_genome = get_length_genome()
+        length_genome = 8627012
+        compression_rate = length_genome / len(encoded)
+        print('The length of the encoded genome is : ' + str(len(encoded)))
+        print('The compression rate is : ' + str(compression_rate))
 
     if Q6:
         out = get_expected_length(assignCodes.codes, marg_prob)
         print('expected average length is : ' + str(out))
+
+    if Q10:
+        f = load_text_sample(name="suppl/genome.txt")
+        if len(f) > 0:
+            print('Text successfully loaded (starts with {})'.format(f[:10]))
+
+        sliding_size = 7
+        _output = LZ77(f, sliding_size)
+        print('LZ77 code is : ' + str(_output))
+        length_genome = 8627012
+        compression_rate = length_genome / len(_output)
+        print('The length of the encoded genome is : ' + str(len(_output)))
+        print('The compression rate is : ' + str(compression_rate))
 
