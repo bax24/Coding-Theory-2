@@ -1,5 +1,7 @@
 import numpy as np
 from suppl.utils import *
+import math
+import matplotlib.pyplot as plt
 
 
 def buildTree(Pd):
@@ -127,11 +129,80 @@ def encoder(message, code):
     return encoding
 
 
+def ACGT_to_binary():
+    
+    chain_length = len(f)
+    ACGT_bin = ""
+    
+    for i in range(0, chain_length):
+        
+        if f[i] == "A" :
+            ACGT_bin += "01000001"
+        elif f[i] == "C" :
+            ACGT_bin += "01000011"
+        elif f[i] == "G" :
+            ACGT_bin += "01000111"
+        elif f[i] == "T" :
+            ACGT_bin += "01010100"
+        else :
+            print("Error : Unknown symbol \'",f[i],"\'.")
+            
+    return ACGT_bin
+    
+    
+    
+def lempel_ziv_encoder():
+    
+    # We consider here a ACTG chain, exprimed in a 8-bits representation
+    
+    dictio = {}
+    chain_length = len(ACGT_bin)
+    curr_charac = ""
+    code = ""
+    
+    prefix = '{0:03b}' # "{0:0"+str(nbr_bits)+"b}"
+    idx = int(1)
+    dictio[''] = ''
+    
+    for i in range(0,chain_length):
+        
+        curr_charac += ACGT_bin[i]
+        
+        if curr_charac in dictio :
+            continue 
+        
+        elif i == chain_length :
+            code += dictio[curr_charac] + curr_charac[-1]
+        
+        else :
+            
+            # Determine the needed number of bits to encode all the sequence
+            nbr_bits = math.floor(math.log(idx+1,2))
+            prefix = "{0:0"+str(nbr_bits)+"b}"
+            dictio[curr_charac] = prefix.format(idx - 2**nbr_bits + 1)
+            idx += 1
+            code += str(dictio[curr_charac[:-1]]) + curr_charac[-1]
+            curr_charac = ""
+        
+    return code, dictio
+
+# This function loads the sound signal (.wav)
+def load_wav():
+	rate, data = read('suppl//sound.wav')
+	return rate, data
+
+# This function save the sound signal (.wav)
+def save_wav(filename,rate,data):
+    write(filename, rate, data)
+
+
 if __name__ == "__main__":
 
-    Huffman, Lempel_zev, LZ77_algo = False, False, False
+    Huffman, Lempel_ziv, LZ77_algo = False, False, False
     Q5, Q6, Q7 = False, False, False
-    Q10 = True
+    Q10 = False
+    
+    Q15, Q16 = True, True
 
     if Huffman:
         # Exercise 7 verification
@@ -148,6 +219,18 @@ if __name__ == "__main__":
         codes = {}
         assignCodes(trim_tree, {**codes})
         print('Huffman codes is : ' + str(assignCodes.codes))
+        
+    if Lempel_ziv :
+        f = load_text_sample()
+        if len(f) > 0 :
+            print('Text successfully loaded (starts with {})'.format(f[:10]))
+        
+        ACGT_bin = ACGT_to_binary()
+        code, dictio = lempel_ziv_encoder()
+        
+        print("Length of the initial chain : ",str(len(ACGT_bin)))
+        print("Length of the compressed chain : ",str(len(code)))
+        print("Compression ration = ",str(len(ACGT_bin)/len(code)))
 
     if LZ77_algo:
         # Example verification
@@ -194,4 +277,17 @@ if __name__ == "__main__":
         compression_rate = length_genome / len(_output)
         print('The length of the encoded genome is : ' + str(len(_output)))
         print('The compression rate is : ' + str(compression_rate))
+        
+        
+    if Q15 :
+        r,s = load_wav()
+        plt.plot(s)
+        plt.title("Sound.wav signal")
+        
+        
+    if Q16 :
+        r,s = load_wav()
+        
+        # save_wav("test.wav",r,s)
+        
 
