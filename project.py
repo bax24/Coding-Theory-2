@@ -194,6 +194,36 @@ def load_wav():
 # This function save the sound signal (.wav)
 def save_wav(filename,rate,data):
     write(filename, rate, data)
+    
+    
+def sound_to_binary():
+    
+    bin_sound = ""
+    sound_length = len(s)
+    
+    for i in range(0,sound_length):
+        bin_sound += '{0:08b}'.format(s[i])
+        
+    return bin_sound
+
+
+def simulate_channel():
+    
+    signal_out = ""
+    signal_length = len(bin_sound)
+    
+    for i in range(0,signal_length):
+        
+        if np.random.randint(0,100) == 1 :
+            if bin_sound[i] == "0" :
+                signal_out += "1" 
+            else :
+                signal_out += "0"
+                
+        else :
+            signal_out += bin_sound[i]
+            
+    return signal_out
 
 
 if __name__ == "__main__":
@@ -202,7 +232,7 @@ if __name__ == "__main__":
     Q5, Q6, Q7 = False, False, False
     Q10 = False
     
-    Q15, Q16 = True, True
+    Q15, Q16, Q17 = True, True, True
 
     if Huffman:
         # Exercise 7 verification
@@ -286,7 +316,10 @@ if __name__ == "__main__":
         
         
     if Q16 :
-        r,s = load_wav()
+        bin_sound = sound_to_binary()
+        
+    if Q17 :
+        sound_through_channel = simulate_channel()
         
         # save_wav("test.wav",r,s)
         
