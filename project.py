@@ -2,6 +2,9 @@ import numpy as np
 from suppl.utils import *
 import math
 import matplotlib.pyplot as plt
+from collections import OrderedDict
+from functools import reduce
+import operator as op
 
 
 def buildTree(Pd):
@@ -149,40 +152,55 @@ def ACGT_to_binary():
             
     return ACGT_bin
     
+
+def binarize(v, nb=0):
+    if nb == 0:
+        return ''
+    else:
+        return np.binary_repr(v,width=nb)
     
     
-def lempel_ziv_encoder():
+def lempel_ziv_encoder(online):
     
-    # We consider here a ACTG chain, exprimed in a 8-bits representation
+# =============================================================================
+# online can take 2 values :
+#     0 for a fixed sized memory address
+#     1 for a memory address depending on the size of the current dictionary
+# =============================================================================
+
+# We consider here an ACTG chain, exprimed in a ASCII (8-bits) representation
     
-    dictio = {}
+    dictio = OrderedDict()
     chain_length = len(ACGT_bin)
-    curr_charac = ""
+    cc = "" # for Current Character(s)
+    nb = 0  # For Number of Bit(s)
     code = ""
-    
-    prefix = '{0:03b}' # "{0:0"+str(nbr_bits)+"b}"
     idx = int(1)
     dictio[''] = ''
     
+    if not online :
+        cod, dic = lempel_ziv_encoder(True)
+        print("code_length : ",str(len(cod))," | ratio : ",str(len(ACGT_bin)/len(cod)))
+        nb = int(np.ceil(np.log2(len(dictio))))
+    
     for i in range(0,chain_length):
+        cc += ACGT_bin[i]
         
-        curr_charac += ACGT_bin[i]
-        
-        if curr_charac in dictio :
+        if cc in dictio :
             continue 
         
         elif i == chain_length :
-            code += dictio[curr_charac] + curr_charac[-1]
+            code += list(dictio.keys()).index(cc)
         
         else :
             
-            # Determine the needed number of bits to encode all the sequence
-            nbr_bits = math.floor(math.log(idx+1,2))
-            prefix = "{0:0"+str(nbr_bits)+"b}"
-            dictio[curr_charac] = prefix.format(idx - 2**nbr_bits + 1)
-            idx += 1
-            code += str(dictio[curr_charac[:-1]]) + curr_charac[-1]
-            curr_charac = ""
+            if online :
+                nb = int(np.ceil(np.log2(idx)))
+                
+            new_val = binarize(list(dictio.keys()).index(cc[:-1]),nb)
+            dictio[cc] = new_val + cc[-1]
+            code += new_val + cc[-1]
+            idx += 1 ; cc = ""
         
     return code, dictio
 
@@ -211,10 +229,12 @@ def simulate_channel():
     
     signal_out = ""
     signal_length = len(bin_sound)
+    cnt = 0 
     
     for i in range(0,signal_length):
         
-        if np.random.randint(0,100) == 1 :
+        if np.random.randint(1,100) == 1 :
+            cnt += 1
             if bin_sound[i] == "0" :
                 signal_out += "1" 
             else :
@@ -222,6 +242,8 @@ def simulate_channel():
                 
         else :
             signal_out += bin_sound[i]
+            
+    print("Percentage of randomly flipped bits : ",cnt/signal_length)
             
     return signal_out
 
@@ -238,13 +260,25 @@ def binary_to_sound():
     return signal_out
 
 
+def hamming_7_4():
+    
+    length_sound = len(bin_sound)
+    hamming_out = ""
+    
+    for i in range(0,length_sound,4):
+        
+        code = np.zeros(8,int)
+        code[3], code[5], code[6], code[7] = bin_sound[i:i+4]
+        
+
+
 if __name__ == "__main__":
 
-    Huffman, Lempel_ziv, LZ77_algo = False, False, False
+    Huffman, Lempel_ziv, LZ77_algo = False, True, False
     Q5, Q6, Q7 = False, False, False
     Q10 = False
     
-    Q15, Q16, Q17 = True, True, True
+    Q15, Q16, Q17, Q18 = True, True, True, True
 
     if Huffman:
         # Exercise 7 verification
@@ -268,7 +302,7 @@ if __name__ == "__main__":
             print('Text successfully loaded (starts with {})'.format(f[:10]))
         
         ACGT_bin = ACGT_to_binary()
-        code, dictio = lempel_ziv_encoder()
+        code, final_dictio = lempel_ziv_encoder(online=False)
         
         print("Length of the initial chain : ",str(len(ACGT_bin)))
         print("Length of the compressed chain : ",str(len(code)))
@@ -333,6 +367,12 @@ if __name__ == "__main__":
     if Q17 :
         sound_through_channel = simulate_channel()
         signal_out = binary_to_sound()
-        save_wav("suppl//sound_out.wav",r,s)
+        plt.figure()
+        plt.plot(signal_out)
+        plt.title("Noisy_sound.wav signal")
+        save_wav("suppl//Noisy_sound.wav",r,signal_out)
+        
+    if Q18 :
+        print("Hey")
         
 
