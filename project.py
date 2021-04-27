@@ -226,6 +226,18 @@ def simulate_channel():
     return signal_out
 
 
+def binary_to_sound():
+    
+    length_sound = len(sound_through_channel)
+    length_out = int(length_sound/8)
+    signal_out = np.zeros(length_out, np.uint8)
+    
+    for i in range(0,length_sound, 8):
+        signal_out[int(i/8)] = int(sound_through_channel[i:i+8],2)
+        
+    return signal_out
+
+
 if __name__ == "__main__":
 
     Huffman, Lempel_ziv, LZ77_algo = False, False, False
@@ -320,7 +332,7 @@ if __name__ == "__main__":
         
     if Q17 :
         sound_through_channel = simulate_channel()
-        
-        # save_wav("test.wav",r,s)
+        signal_out = binary_to_sound()
+        save_wav("suppl//sound_out.wav",r,s)
         
 
