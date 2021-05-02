@@ -1,5 +1,15 @@
 import numpy as np
 from suppl.utils import *
+import matplotlib.pyplot as plt
+import math
+
+
+def entropy(prob):
+    entr = 0
+    for i in range(len(prob)):
+        entr += prob[i] * math.log(prob[i], 2)
+
+    return -entr
 
 
 def buildTree(Pd):
@@ -10,11 +20,9 @@ def buildTree(Pd):
         combFreq = leastTwo[0][1] + leastTwo[1][1]  # the branch points freq
         Pd = theRest + [(leastTwo, combFreq)]  # add branch point to the end
         Pd.sort(key=lambda t: t[1])
-
+    print(Pd[0])
     return Pd[0]  # sort it into place
 
-
-# Hello adri
 
 def assignCodes(node, codes, pat=''):
     assignCodes.codes = codes
@@ -70,7 +78,7 @@ def LZ77_search(search, look_ahead):
     return best_offset, best_length, buf[search_pointer + best_length]
 
 
-def LZ77(input_string, size_l):
+def LZ77(input_string, size_l, disp=True):
     output = []
     window = ''
     i = 0
@@ -85,7 +93,15 @@ def LZ77(input_string, size_l):
             window = window + input_string[0]
             input_string = input_string[1:]
             length = length - 1
+    if disp:
+        print('LZ77 code is : ' + str(output))
     return output
+
+
+def get_emp_length(seq, encoded_seq):
+    nb_codons = len(seq) / 3
+    empirical_av_length = len(encoded_seq) / nb_codons
+    return empirical_av_length
 
 
 def get_expected_length(huff_codes, prob):
@@ -96,7 +112,19 @@ def get_expected_length(huff_codes, prob):
     return codes_lengths
 
 
-def get_marg_prob(f):
+def Huffman(prob_dist, disp=True):
+    Pd_list = list(prob_dist.items())
+    Tree = buildTree(Pd_list)
+    trim_tree = trimTree(Tree)
+    print(trim_tree)
+    codes = {}
+    assignCodes(trim_tree, {**codes})
+
+    if disp:
+        print('Huffman codes is : ' + str(assignCodes.codes))
+
+
+def get_marg_prob(f, disp=True):
     prob = {}
     total = len(f) / 3
     while f:
@@ -107,6 +135,10 @@ def get_marg_prob(f):
         f = f[3:]
 
     prob = {k: v / total for k, v in prob.items()}
+
+    if disp:
+        print(prob)
+
     return prob
 
 
@@ -118,7 +150,7 @@ def get_length_genome():
     return len(file)
 
 
-def encoder(message, code):
+def huff_encoder(message, code):
     encoding = ''
     while message:
         element = message[0:3]
@@ -127,13 +159,38 @@ def encoder(message, code):
     return encoding
 
 
+def tuples_to_bin(element, opti=True):
+    encoded_tuple = ''
+    for i in range(len(element)):
+        if isinstance(element[i], str):
+            if opti:
+                if element[i] == 'A':
+                    encoded_tuple += '00'
+                elif element[i] == 'C':
+                    encoded_tuple += '01'
+                elif element[i] == 'T':
+                    encoded_tuple += '10'
+                elif element[i] == 'G':
+                    encoded_tuple += '11'
+            else:
+                encoded_tuple += binarize(ord(element[i]))
+        else:
+            encoded_tuple += binarize(element[i], 9)
+    return encoded_tuple
+
+
+def LZ77_encoder(sequence):
+    out = map(tuples_to_bin, sequence)
+    return ''.join(list(out))
+
+
 if __name__ == "__main__":
 
-    Huffman, Lempel_zev, LZ77_algo = False, False, False
+    Huffman_algo, Lempel_zev_algo, LZ77_algo = False, False, False
     Q5, Q6, Q7 = False, False, False
     Q10 = True
 
-    if Huffman:
+    if Huffman_algo:
         # Exercise 7 verification
         Pd = {'0': 0.05,
               '1': 0.10,
@@ -141,20 +198,16 @@ if __name__ == "__main__":
               '3': 0.15,
               '4': 0.20,
               '5': 0.35}
+        Huffman(Pd)
 
-        Pd_list = list(Pd.items())
-        Tree = buildTree(Pd_list)
-        trim_tree = trimTree(Tree)
-        codes = {}
-        assignCodes(trim_tree, {**codes})
-        print('Huffman codes is : ' + str(assignCodes.codes))
+    if Lempel_zev_algo:
+        True
 
     if LZ77_algo:
         # Example verification
         string = 'abracadabrad'
         sliding_size = 7
         _output = LZ77(string, sliding_size)
-        print('LZ77 code is : ' + str(_output))
 
     if Q5:
         f = load_text_sample(name="suppl/genome.txt")
@@ -162,36 +215,57 @@ if __name__ == "__main__":
             print('Text successfully loaded (starts with {})'.format(f[:10]))
 
         marg_prob = get_marg_prob(f)
-        print(marg_prob)
         print(sum(marg_prob.values(), 0.0))  # verification
-
-        marg_prob_list = list(marg_prob.items())
-        Tree = buildTree(marg_prob_list)
-        trim_tree = trimTree(Tree)
-        codes = {}
-        assignCodes(trim_tree, {**codes})
-        print('Huffman code for genome : ' + str(assignCodes.codes))
-        encoded = encoder(f, assignCodes.codes)
+        Huffman(marg_prob, disp=False)
+        encoded = huff_encoder(f, assignCodes.codes)
         # length_genome = get_length_genome()
         length_genome = 8627012
         compression_rate = length_genome / len(encoded)
         print('The length of the encoded genome is : ' + str(len(encoded)))
         print('The compression rate is : ' + str(compression_rate))
+        lower_bound = entropy(list(marg_prob.values())) / 1
+        upper_bound = lower_bound + 1
+        print('the bounds are ' + str(lower_bound) + ' and ' + str(upper_bound))
 
     if Q6:
         out = get_expected_length(assignCodes.codes, marg_prob)
         print('expected average length is : ' + str(out))
+        emp_length = get_emp_length(f, encoded)
+        print('empirical average length is : ' + str(emp_length))
+
+    if Q7:
+        encodeds = []
+        emp_lengths = []
+        steps = [300, 900, 3000, 9000, 300000, 900000, 3000000]
+
+        f = load_text_sample(name="suppl/genome.txt")
+        if len(f) > 0:
+            print('Text successfully loaded (starts with {})'.format(f[:10]))
+
+        for i in steps:
+            print(i)
+            marg_prob = get_marg_prob(f[:i])
+            Huffman(marg_prob, disp=False)
+            encoded = huff_encoder(f[:i], assignCodes.codes)
+            encodeds.append(encoded)
+            emp_length = get_emp_length(f[:i], encoded)
+            emp_lengths.append(emp_length)
+            print(emp_lengths)
+
+        ax = plt.plot(steps, emp_lengths, color='g')
+        plt.xscale('log')
+        plt.axhline(y=5.901101342956131, color='r', linestyle='--')
+        plt.show()
 
     if Q10:
         f = load_text_sample(name="suppl/genome.txt")
         if len(f) > 0:
             print('Text successfully loaded (starts with {})'.format(f[:10]))
 
-        sliding_size = 7
+        sliding_size = 500
         _output = LZ77(f, sliding_size)
-        print('LZ77 code is : ' + str(_output))
         length_genome = 8627012
-        compression_rate = length_genome / len(_output)
-        print('The length of the encoded genome is : ' + str(len(_output)))
+        encoded = LZ77_encoder(_output)
+        compression_rate = length_genome / len(encoded)
+        print('The length of the encoded genome is : ' + str(len(encoded)))
         print('The compression rate is : ' + str(compression_rate))
-
