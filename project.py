@@ -368,7 +368,6 @@ def get_error(sound1,sound2,diff=False):
                 
             cnt += 1
            
-    print("cnt " ,cnt)
     return cnt/lg1, diff_cnt/cnt
 
 
@@ -481,7 +480,7 @@ if __name__ == "__main__":
         ham_through_chan = simulate_channel(ham_encod_sound)
         ham_decod = hamming_7_4_decoder(ham_through_chan)
         ham_sound_out = binary_to_sound(ham_decod)
-        error, average_err = get_error(s,ham_sound_out,diff=True)
+        error, average_err = get_error(s,ham_sound_out)
         print("Hamming error : ",error)
         plt.figure()
         plt.plot(ham_sound_out)
