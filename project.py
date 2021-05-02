@@ -179,9 +179,10 @@ def lempel_ziv_encoder(online):
     dictio[''] = ''
     
     if not online :
-        cod, dic = lempel_ziv_encoder(True)
-        print("code_length : ",str(len(cod))," | ratio : ",str(len(ACGT_bin)/len(cod)))
-        nb = int(np.ceil(np.log2(len(dictio))))
+        # cod, dic = lempel_ziv_encoder(True)
+        # print("code_length : ",str(len(cod))," | ratio : ",str(len(ACGT_bin)/len(cod)))
+        # int(np.ceil(np.log2(len(dic))))
+        nb = 3
     
     for i in range(0,chain_length):
         cc += ACGT_bin[i]
@@ -225,43 +226,43 @@ def sound_to_binary():
     return bin_sound
 
 
-def simulate_channel():
+def simulate_channel(sound_in):
     
     signal_out = ""
-    signal_length = len(bin_sound)
+    signal_length = len(sound_in)
     cnt = 0 
     
     for i in range(0,signal_length):
         
         if np.random.randint(1,100) == 1 :
             cnt += 1
-            if bin_sound[i] == "0" :
+            if sound_in[i] == "0" :
                 signal_out += "1" 
             else :
                 signal_out += "0"
                 
         else :
-            signal_out += bin_sound[i]
+            signal_out += sound_in[i]
             
-    print("Percentage of randomly flipped bits : ",cnt/signal_length)
+    # print("Percentage of randomly flipped bits : ",cnt/signal_length)
             
     return signal_out
 
 
-def binary_to_sound():
+def binary_to_sound(sound_in):
     
-    length_sound = len(sound_through_channel)
+    length_sound = len(sound_in)
     length_out = int(length_sound/8)
-    signal_out = np.zeros(length_out, np.uint8)
+    sound_out = np.zeros(length_out, np.uint8)
     
     for i in range(0,length_sound, 8):
-        signal_out[int(i/8)] = int(sound_through_channel[i:i+8],2)
+        sound_out[int(i/8)] = int(sound_in[i:i+8],2)
         
-    return signal_out
+    return sound_out
 
 
-def hamming_7_4():
-    
+def hamming_7_4_encoder(extend=True):
+
     length_sound = len(bin_sound)
     hamming_out = ""
     
@@ -269,16 +270,115 @@ def hamming_7_4():
         
         code = np.zeros(8,int)
         code[3], code[5], code[6], code[7] = bin_sound[i:i+4]
+        if sum(code) == 0 :
+            idx = int(0)
+        else :
+            idx = reduce(op.xor, [j for j, bit in enumerate(code) if bit])
+        bits = binarize(idx,3)
+        code[4], code[2], code[1] = bits
+         
+        if extend :
+            code[0] = sum(code[0:8])%2
+            
+        for j in range(0,8):
+            hamming_out += str(code[j])     
+            
+    return hamming_out
+
+
+def hamming_7_4_decoder(ham_sound):
+    
+    length_sound = len(ham_sound)
+    hamming_in = "" ; curr_bits = np.zeros(8,int)
+    flip_bit = "0000" ; is_part_1 = True
+    seq = "" ; pass_loop = False
+    
+    for i in range(0,length_sound,8):
         
+        if pass_loop :
+            pass_loop = False
+            continue 
+        
+        for j in range(0,8):
+            curr_bits[j] = int(ham_sound[i+j])
+            
+        bits_sum = sum(curr_bits)
+            
+        if bits_sum == 0 :
+            idx = int(0)
+        else :
+            idx = reduce(op.xor, [k for k, bit in enumerate(curr_bits) if bit])
+        bits = binarize(idx,3)
+        
+        if bits_sum%2 != 0 : # Probably one error
+            
+            if bits == '011' :      # bit 3 has been flipped
+                flip_bit = "1000"
+                    
+            elif bits == '101' :    # bit 5 has been flipped
+                flip_bit = "0100"
+                
+            elif bits == '110' :    # bit 6 has been flipped
+                flip_bit = "0010"
+                
+            elif bits == '111' :    # bit 7 has been flipped
+                flip_bit = "0001"
+                
+            else :                  # a parity bit has been flipped
+                flip_bit = "0000"
+                
+        elif bits_sum%2 == 0 and bits != '000' : # 2 erros
+        
+            if i >= 8 :
+                if is_part_1 :
+                    hamming_in += hamming_in[int(i/2)-8:int(i/2)]
+                    pass_loop = True
+                    
+                else :
+                    hamming_in += hamming_in[int(i/2)-8:int(i/2)-4]
+                    is_part_1 = True
+                            
+                continue 
+                
+        else :
+            flip_bit = "0000"
+                
+        seq = ham_sound[i+3] + ham_sound[i+5] + ham_sound[i+6] + ham_sound[i+7]          
+        hamming_in += str(binarize(int(seq,2) ^ int(flip_bit,2),4))
+        is_part_1 = not is_part_1
+            
+    return hamming_in
+        
+
+def get_error(sound1,sound2,diff=False):
+    
+    lg1, lg2 = len(sound1), len(sound2)
+    
+    if lg1 != lg2 :
+        print("Error : sounds are of different lengths !")
+        return int(-1)
+        
+    cnt = int(0) ; diff_cnt = 0
+        
+    for i in range(0,lg1):
+        if sound1[i] != sound2[i]:
+            if diff :
+                diff_cnt += abs(sound1[i] - sound2[i])
+                print(diff_cnt)
+                
+            cnt += 1
+           
+    print("cnt " ,cnt)
+    return cnt/lg1, diff_cnt/cnt
 
 
 if __name__ == "__main__":
 
-    Huffman, Lempel_ziv, LZ77_algo = False, True, False
+    Huffman, Lempel_ziv, LZ77_algo = False, False, False
     Q5, Q6, Q7 = False, False, False
     Q10 = False
     
-    Q15, Q16, Q17, Q18 = True, True, True, True
+    Q15, Q16, Q17, Q18, Q19 = True, True, True, True, True
 
     if Huffman:
         # Exercise 7 verification
@@ -301,7 +401,7 @@ if __name__ == "__main__":
         if len(f) > 0 :
             print('Text successfully loaded (starts with {})'.format(f[:10]))
         
-        ACGT_bin = ACGT_to_binary()
+        ACGT_bin = "1011010100010" # ACGT_to_binary()
         code, final_dictio = lempel_ziv_encoder(online=False)
         
         print("Length of the initial chain : ",str(len(ACGT_bin)))
@@ -365,14 +465,27 @@ if __name__ == "__main__":
         bin_sound = sound_to_binary()
         
     if Q17 :
-        sound_through_channel = simulate_channel()
-        signal_out = binary_to_sound()
+        sound_through_channel = simulate_channel(bin_sound)
+        signal_out = binary_to_sound(sound_through_channel)
+        error, _ = get_error(s,signal_out)
+        print("Error : ",error)
         plt.figure()
         plt.plot(signal_out)
         plt.title("Noisy_sound.wav signal")
         save_wav("suppl//Noisy_sound.wav",r,signal_out)
         
     if Q18 :
-        print("Hey")
+        ham_encod_sound = hamming_7_4_encoder(extend=True)
+        
+    if Q19 :
+        ham_through_chan = simulate_channel(ham_encod_sound)
+        ham_decod = hamming_7_4_decoder(ham_through_chan)
+        ham_sound_out = binary_to_sound(ham_decod)
+        error, average_err = get_error(s,ham_sound_out,diff=True)
+        print("Hamming error : ",error)
+        plt.figure()
+        plt.plot(ham_sound_out)
+        plt.title("Enhance Hamming_sound.wav signal")
+        save_wav("suppl//Hamming_sound.wav",r,ham_sound_out)
         
 
